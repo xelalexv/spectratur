@@ -30,11 +30,9 @@ void SerialKbd::process(uint8_t readBuf[2], TargetKbd *kbd) {
 
     switch (makeBreak) {
         case 0: // break
-            DPRINTLN("[ SER] release '" + String((char)code) + "'");
             a = RELEASE_KEY;
             break;
         case 1: // make
-            DPRINTLN("[ SER] press '" + String((char)code) + "'");
             a = PRESS_KEY;
             break;
         default:
@@ -43,7 +41,7 @@ void SerialKbd::process(uint8_t readBuf[2], TargetKbd *kbd) {
     }
 
     uint8_t key = map->translate(code);
-    DPRINTLN("[ SER] code: " + String((char)code) + ", action: " + String(a) +
+    DPRINTLN("[ SER] action: " + String(a) + ", code: " + String(code) +
         ", key: " + String(key));
 
     kbd->handleKey(key, a);

@@ -14,28 +14,28 @@
     limitations under the License.
 */
 
-#include "mt8808.h"
+#include "mt88xx.h"
 
-// TODO: pass port reference?
-MT8808::MT8808() {}
+// TODO: pass port references?
+MT88xx::MT88xx() {}
 
 //
-void MT8808::reset() {
-    DPRINTLN("[8808] resetting");
+void MT88xx::reset() {
+    DPRINTLN("[88xx] resetting");
     PORTD |= MASK_RESET;
     delayMicroseconds(3);
     PORTD &= ~MASK_RESET;
 }
 
 //
-void MT8808::setSwitch(uint8_t address, bool state) {
+void MT88xx::setSwitch(uint8_t address, bool state) {
     setAddress(address);
     setData(state);
     strobe();
 }
 
 //
-void MT8808::strobe() {
+void MT88xx::strobe() {
     PORTD |= MASK_STROBE; // strobe HIGH
     // the data sheet specifies a minimum of 20ns, the minimal reliable value
     // for delayMicroseconds is 3, which is OK for our application
@@ -44,14 +44,18 @@ void MT8808::strobe() {
 }
 
 //
-void MT8808::setAddress(uint8_t a) {
-    // set address, but make sure not to touch upper two bits
+void MT88xx::setAddress(uint8_t a) {
+    // set address bits AX0-2 and AY0-2 in PORTB, but squeeze out AX3 and
+    // don't touch upper two bits
     PORTB |= (MASK_AX | MASK_AY);
-    PORTB &= (a | (~(MASK_AX | MASK_AY)));
+    PORTB &= (~(MASK_AX | MASK_AY) | (a & MASK_AX) | ((a >> 1) & MASK_AY));
+    // set AX3, for MT8812/16
+    PORTC |= MASK_AX3;
+    PORTC &= (((a << 2) & MASK_AX3) | ~MASK_AX3);
 }
 
 //
-void MT8808::setData(bool on) {
+void MT88xx::setData(bool on) {
     if (on) {
         PORTD |= MASK_DATA;
     } else {

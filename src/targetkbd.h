@@ -20,27 +20,23 @@
 #include <Arduino.h>
 
 #include "config.h"
-#include "mt8808.h"
-
-// masks
-static const uint8_t MASK_ADDRESS_COL = MASK_AX;
-static const uint8_t MASK_ADDRESS_ROW = MASK_AY;
+#include "mt88xx.h"
 
 //
 class TargetKbd {
 
 private:
-    MT8808 mt8808;
+    MT88xx mt88xx;
     // This bit matrix represents the current state of the target keyboard.
     // A key is pressed when its corresponding bit is 0.
-    uint8_t kbdMatrix[8];
+    uint8_t kbdMatrix[16];
 
     void clearKeyboardMatrix();
     bool isCombo(uint8_t key);
     bool isValidKeyAddress(uint8_t key);
-    bool isValidRowCol(uint8_t row, uint8_t col);
-    void setKeyState(uint8_t row, uint8_t col, bool on);
-    bool getKeyState(uint8_t row, uint8_t col);
+    bool isValidAxAy(uint8_t ax, uint8_t ay);
+    void setKeyState(uint8_t ax, uint8_t ay, bool on);
+    bool getKeyState(uint8_t ax, uint8_t ay);
     void handleCombo(uint8_t combo[], KeyAction a);
 
 public:

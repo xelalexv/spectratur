@@ -45,7 +45,9 @@
 #define COMBO( c ) K_COMBO | c
 
 static const uint8_t NA = 0xff; // shorthand for "not assigned"
-static const uint8_t K_COMBO = B01000000; // base for a key combination
+static const uint8_t K_COMBO   = B10000000; // base for a key combination
+static const uint8_t K_MASK_AX = B00001111; // mask for AX address bits
+static const uint8_t K_MASK_AY = B01110000; // mask for AY address bits
 
 
 // Include the header file with all the necessary definitions for your target

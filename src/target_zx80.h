@@ -25,13 +25,13 @@
 /* --- key addresses in target keyboard matrix -------------------------------
 
     The constants below define the 6 bit addresses of the target keys in the
-    MT8808 switch matrix. The lower 3 bits of an address are the `AX` bits,
+    MT88xx switch matrix. The lower 4 bits of an address are the `AX` bits,
     the upper 3 bits the `AY` bits.
 
         bit | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-            | x | x |    AY     |    AX     |
+            | x |    AY     |      AX       |
 
-    This table shows the assignment of the ZX80 keyboard lines to the MT8808
+    This table shows the assignment of the ZX80 keyboard lines to an MT8808
     switch matrix, and the resulting key assignments:
 
         pin     (6)  (23)   (7)  (22)   (8)  (21)   (9)  (20)
@@ -47,47 +47,47 @@
                 (D3)  (D4) (D5)  (D6)  (D7)  (D8)  (D9)  (D10)  bus (via diodes)
  */
 
-static const uint8_t K_1 = B000011;
-static const uint8_t K_2 = B001011;
-static const uint8_t K_3 = B010011;
-static const uint8_t K_4 = B011011;
-static const uint8_t K_5 = B100011;
-static const uint8_t K_6 = B100100;
-static const uint8_t K_7 = B011100;
-static const uint8_t K_8 = B010100;
-static const uint8_t K_9 = B001100;
-static const uint8_t K_0 = B000100;
-static const uint8_t K_A = B000001;
-static const uint8_t K_B = B100111;
-static const uint8_t K_C = B011000;
-static const uint8_t K_D = B010001;
-static const uint8_t K_E = B010010;
-static const uint8_t K_F = B011001;
-static const uint8_t K_G = B100001;
-static const uint8_t K_H = B100110;
-static const uint8_t K_I = B010101;
-static const uint8_t K_J = B011110;
-static const uint8_t K_K = B010110;
-static const uint8_t K_L = B001110;
-static const uint8_t K_M = B010111;
-static const uint8_t K_N = B011111;
-static const uint8_t K_O = B001101;
-static const uint8_t K_P = B000101;
-static const uint8_t K_Q = B000010;
-static const uint8_t K_R = B011010;
-static const uint8_t K_S = B001001;
-static const uint8_t K_T = B100010;
-static const uint8_t K_U = B011101;
-static const uint8_t K_V = B100000;
-static const uint8_t K_W = B001010;
-static const uint8_t K_X = B010000;
-static const uint8_t K_Y = B100101;
-static const uint8_t K_Z = B001000;
+static const uint8_t K_1 = B0000011;
+static const uint8_t K_2 = B0010011;
+static const uint8_t K_3 = B0100011;
+static const uint8_t K_4 = B0110011;
+static const uint8_t K_5 = B1000011;
+static const uint8_t K_6 = B1000100;
+static const uint8_t K_7 = B0110100;
+static const uint8_t K_8 = B0100100;
+static const uint8_t K_9 = B0010100;
+static const uint8_t K_0 = B0000100;
+static const uint8_t K_A = B0000001;
+static const uint8_t K_B = B1000111;
+static const uint8_t K_C = B0110000;
+static const uint8_t K_D = B0100001;
+static const uint8_t K_E = B0100010;
+static const uint8_t K_F = B0110001;
+static const uint8_t K_G = B1000001;
+static const uint8_t K_H = B1000110;
+static const uint8_t K_I = B0100101;
+static const uint8_t K_J = B0110110;
+static const uint8_t K_K = B0100110;
+static const uint8_t K_L = B0010110;
+static const uint8_t K_M = B0100111;
+static const uint8_t K_N = B0110111;
+static const uint8_t K_O = B0010101;
+static const uint8_t K_P = B0000101;
+static const uint8_t K_Q = B0000010;
+static const uint8_t K_R = B0110010;
+static const uint8_t K_S = B0010001;
+static const uint8_t K_T = B1000010;
+static const uint8_t K_U = B0110101;
+static const uint8_t K_V = B1000000;
+static const uint8_t K_W = B0010010;
+static const uint8_t K_X = B0100000;
+static const uint8_t K_Y = B1000101;
+static const uint8_t K_Z = B0010000;
 
-static const uint8_t K_SHIFT   = B000000;
-static const uint8_t K_NEWLINE = B000110;
-static const uint8_t K_SPACE   = B000111;
-static const uint8_t K_DOT     = B001111;
+static const uint8_t K_SHIFT   = B0000000;
+static const uint8_t K_NEWLINE = B0000110;
+static const uint8_t K_SPACE   = B0000111;
+static const uint8_t K_DOT     = B0010111;
 
 // --- combos ----------------------------------------------------------------
 
