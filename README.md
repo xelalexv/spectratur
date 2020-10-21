@@ -3,7 +3,7 @@
 #### *keyboard actuator for vintage computers*
 
 ## TL;DR
-*spectratur* was originally developed for sending keyboard input from a PC to a *Sinclair ZX Spectrum*, hence the name - *Spectrum* + *Tastatur* (German for keyboard). But it can be easily adapted to work with other vintage machines - actually with almost anything with a keyboard matrix of up to 8x8 keys. To actuate keys, *spectratur* hooks into the keyboard using a [*Zarlink MT8808*](https://www.mouser.com/pdfdocs/Mt8808_DataSheet.PDF) 8x8 switch matrix, which is controlled by an *Arduino Nano* (other *Arduinos* can be used as well). Key strokes can be sent to the *Arduino* via the *USB* serial link, as well as via a *USB* keyboard attached to the *Arduino*. Optionally, a joystick can also be connected to the *Arduino* to generate key strokes.
+*spectratur* was originally developed for sending keyboard input from a PC to a *Sinclair ZX Spectrum*, hence the name - *Spectrum* + *Tastatur* (German for keyboard). But it can be easily adapted to work with other vintage machines - actually with almost anything with a keyboard matrix of up to 8x16 keys. To actuate keys, *spectratur* hooks into the keyboard using a [*Zarlink MT8808*](https://www.mouser.com/pdfdocs/Mt8808_DataSheet.PDF) 8x8 switch matrix. *MT8812* and *MT8816* are also supported, which provide larger matrices (8x12 and 8x16) and can be used for larger keyboards. The *MT88xx* is controlled by an *Arduino Nano* (other *Arduinos* can be used as well). Key strokes can be sent to the *Arduino* via the *USB* serial link, as well as via a *USB* keyboard attached to the *Arduino*. Optionally, a joystick can also be connected to the *Arduino* to generate key strokes.
 
 ![breed board](doc/breadboard.jpg)
 *spectratur* on a breadboard.
@@ -30,7 +30,7 @@ I chose this key stroke based approach over a character based approach, since it
 *Macros* are not yet implemented. They are shortcuts for sequences of key presses that can be assigned to keys on the external keyboard. These keys are not part of the core mapping. When a macro key is typed, it triggers a sequence of key presses and releases being sent to the target. For the *ZX Spectrum* for example, `F2` on the external keyboard could be assigned the macro `LOAD *"m";1;"`, the command for loading a program from *Microdrive* 1. Only the name of the program to load has to be entered now, followed by a closing `"`.
 
 ## Hardware
-Here's the schematic using an *Arduino Nano*. When using a different *Arduino*, you may have to change the port assignments in [spectratur.ino](src/spectratur.ino) and [mt8808.cpp](src/mt8808.cpp). How you connect the `X` and `Y` pins of the *MT8808* to the target keyboard depends on your particular target machine. The connectors `KB1` and `KB2` shown here are the keyboard connectors of a *Sinclair ZX Spectrum*.
+Here's the schematic using an *Arduino Nano*. When using a different *Arduino*, you may have to change the port assignments in [spectratur.ino](src/spectratur.ino) and [mt8808.cpp](src/mt8808.cpp). How you connect the `X` and `Y` pins of the *MT8808* to the target keyboard depends on your particular target machine. Also, when using an *MT8812* or *MT8816*, you need to run an additional connection from `A5` on the *Arduino* to `AX3` on the *MT88xx*. The connectors `KB1` and `KB2` shown here are the keyboard connectors of a *Sinclair ZX Spectrum*.
 
 ![schematic](doc/spectratur_schem.png)
 

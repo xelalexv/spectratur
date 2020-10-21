@@ -22,7 +22,7 @@ TargetKbd::TargetKbd() {}
 //
 void TargetKbd::reset() {
     clearKeyboardMatrix();
-    mt8808.reset();
+    mt88xx.reset();
 }
 
 //
@@ -57,9 +57,14 @@ void TargetKbd::releaseKey(uint8_t k) {
 //
 void TargetKbd::handleKey(uint8_t k, KeyAction a) {
 
+    if (k == NA) {
+        DPRINTLN("[TRGT] unassigned key");
+        return;
+    }
+
     if (isCombo(k)) {
         DPRINTLN("[TRGT] combo " + String(k));
-        handleCombo(COMBOS[k & B00111111], a);
+        handleCombo(COMBOS[k & ~K_COMBO], a);
         return;
     }
 
@@ -68,13 +73,8 @@ void TargetKbd::handleKey(uint8_t k, KeyAction a) {
         return;
     }
 
-    uint8_t col = k & MASK_ADDRESS_COL;
-    uint8_t row = k >> 3;
-
-    if (row >= 5) {
-        DPRINTLN("[TRGT] row out of bounds: " + String(row));
-        return;
-    }
+    uint8_t ax = k & K_MASK_AX;
+    uint8_t ay = (k & K_MASK_AY) >> 4; // shift out 4 AX bits
 
     bool data = false;
 
@@ -86,18 +86,18 @@ void TargetKbd::handleKey(uint8_t k, KeyAction a) {
             data = false;
             break;
         case FLIP_KEY:
-            data = !getKeyState(row, col);
+            data = !getKeyState(ax, ay);
             DPRINTLN("[TRGT] flipping to: " + String(data));
             break;
     }
 
-    DPRINTLN("[TRGT] address: " + String(k) + ", col: " + String(col) +
-        ", row: " + String(row) + ", data: " + String(data));
+    DPRINTLN("[TRGT] address: " + String(k) + ", ax: " + String(ax) +
+        ", ay: " + String(ay) + ", data: " + String(data));
 
-    mt8808.setSwitch(k, data);
+    mt88xx.setSwitch(k, data);
 
     // track key's on/off state
-    setKeyState(row, col, data);
+    setKeyState(ax, ay, data);
 
     //delay(100);
 }
@@ -117,43 +117,43 @@ void TargetKbd::handleCombo(uint8_t combo[], KeyAction a) {
 
 //
 bool TargetKbd::isCombo(uint8_t key) {
-    return ((key & B11000000) == K_COMBO) && ((key & B00111111) < END_OF_COMBOS);
+    return ((key & K_COMBO) == K_COMBO) && ((key & ~K_COMBO) < END_OF_COMBOS);
 }
 
 //
 bool TargetKbd::isValidKeyAddress(uint8_t key) {
-    return 0 <= key && key < B01000000;
+    return key < K_COMBO;
 }
 
 
 //
-bool TargetKbd::isValidRowCol(uint8_t row, uint8_t col) {
-    if (row >= array_len(kbdMatrix)) {
-        DPRINTLN("[TRGT] matrix row out of bounds: " + String(row));
+bool TargetKbd::isValidAxAy(uint8_t ax, uint8_t ay) {
+    if (ax >= array_len(kbdMatrix)) {
+        DPRINTLN("[TRGT] matrix AX out of bounds: " + String(ax));
         return false;
     }
-    if (col >= 8) {
-        DPRINTLN("[TRGT] matrix column out of bounds: " + String(col));
+    if (ay > 7) {
+        DPRINTLN("[TRGT] matrix AY out of bounds: " + String(ay));
         return false;
     }
     return true;
 }
 
 //
-void TargetKbd::setKeyState(uint8_t row, uint8_t col, bool on) {
-    if (isValidRowCol(row, col)) {
+void TargetKbd::setKeyState(uint8_t ax, uint8_t ay, bool on) {
+    if (isValidAxAy(ax, ay)) {
         if (on) {
-            kbdMatrix[row] = kbdMatrix[row] | (1 << col);
+            kbdMatrix[ax] = kbdMatrix[ax] | (1 << ay);
         } else {
-            kbdMatrix[row] = kbdMatrix[row] & (~(1 << col));
+            kbdMatrix[ax] = kbdMatrix[ax] & (~(1 << ay));
         }
     }
 }
 
 //
-bool TargetKbd::getKeyState(uint8_t row, uint8_t col) {
-    if (isValidRowCol(row, col)) {
-        return (kbdMatrix[row] & (1 << col)) != 0;
+bool TargetKbd::getKeyState(uint8_t ax, uint8_t ay) {
+    if (isValidAxAy(ax, ay)) {
+        return (kbdMatrix[ax] & (1 << ay)) != 0;
     }
     return false;
 }

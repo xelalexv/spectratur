@@ -24,7 +24,7 @@ KeyMap::KeyMap(uint8_t *m, uint8_t l) {
 
 //
 bool KeyMap::isValidIndex(uint8_t ix) {
-    return 0 <= ix && ix < length;
+    return ix < length;
 }
 
 //

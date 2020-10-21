@@ -45,19 +45,19 @@ void setup() {
             2: input pull-up (reserve; interrupt capable)
             3: PS/2 library: KBD clock; interrupt capable
             4: PS/2 library: KBD data
-            5: output, MT8808 RESET
-            6: output, MT8808 DATA
-            7: output, MT8808 STROBE */
+            5: output, MT88xx RESET
+            6: output, MT88xx DATA
+            7: output, MT88xx STROBE */
     DDRD  |= B11100000;
     PORTD &= B00011111;
 
     /* port B (digital pins 8 to 13)
-        bit 0: output, MT8808 AX0
-            1: output, MT8808 AX1
-            2: output, MT8808 AX2
-            3: output, MT8808 AY0
-            4: output, MT8808 AY1
-            5: output, MT8808 AY2 (also LED)
+        bit 0: output, MT88xx AX0
+            1: output, MT88xx AX1
+            2: output, MT88xx AX2
+            3: output, MT88xx AY0
+            4: output, MT88xx AY1
+            5: output, MT88xx AY2 (also LED)
             6: input pull-up (not accessible)
             7: input pull-up (not accessible) */
     DDRB  = B00111111;
@@ -69,11 +69,11 @@ void setup() {
             2: input pull-up, joystick LEFT
             3: input pull-up, joystick RIGHT
             4: input pull-up, joystick TRIGGER
-            5: input pull-up (reserve)
+            5: output, MT8812/16 AX3
             6: input pull-up (not accessible)
             7: input pull-up (not accessible) */
-    DDRC  = B00000000;
-    PORTC = B11111111;
+    DDRC  = B00100000;
+    PORTC = B11011111;
 
     targetKbd = new TargetKbd();
     serialKbd = new SerialKbd();

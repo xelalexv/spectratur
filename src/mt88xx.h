@@ -14,22 +14,25 @@
     limitations under the License.
 */
 
-#ifndef MT8808_h
-#define MT8808_h
+#ifndef MT88xx_h
+#define MT88xx_h
 
 #include <Arduino.h>
 
 #include "config.h"
 
-// masks
+// masks within PORTD
 static const uint8_t MASK_RESET  = B00100000;
 static const uint8_t MASK_DATA   = B01000000;
 static const uint8_t MASK_STROBE = B10000000;
+// masks within PORTB
 static const uint8_t MASK_AX     = B00000111;
 static const uint8_t MASK_AY     = B00111000;
+// masks within PORTC
+static const uint8_t MASK_AX3    = B00100000;
 
 //
-class MT8808 {
+class MT88xx {
 
 private:
     void setAddress(uint8_t a);
@@ -37,7 +40,7 @@ private:
     void strobe();
 
 public:
-    MT8808();
+    MT88xx();
     void reset();
     void setSwitch(uint8_t address, bool state);
 };
