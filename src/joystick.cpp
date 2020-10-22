@@ -36,7 +36,7 @@ void Joystick::process(uint8_t data, TargetKbd *kbd) {
         return;
     }
 
-    DPRINTLN("[ JOY] data: " + String(data));
+    DPRINTLN("[ JOY] port data: " + String(data));
 
     uint8_t mask = 1;
 
@@ -54,6 +54,8 @@ void Joystick::process(uint8_t data, TargetKbd *kbd) {
 //
 void Joystick::setMap(uint8_t m[JOYSTICK_ACTIONS]) {
     for (uint8_t ix = 0; ix < JOYSTICK_ACTIONS; ix++) {
+        DPRINTLN("[ JOY] mapping action " + String(ix) +
+            " to key " + String(m[ix]));
         map[ix] = m[ix];
     }
 }

@@ -88,15 +88,13 @@ void ExternalKbd::process(TargetKbd *kbd, Joystick *joy) {
     KeyAction a;
 
     if ((c & PS2_BREAK) != 0) {
-        DPRINTLN("[PS/2] release '" + String((char)code) + "'");
         a = RELEASE_KEY;
     } else {
-        DPRINTLN("[PS/2] press '" + String((char)code) + "'");
         a = PRESS_KEY;
     }
 
-    DPRINTLN("[PS/2] code: " + String(code) + ", control: " + String(c >> 8) +
-        ", action: " + String(a) + ", key: " + String(key));
+    DPRINTLN("[PS/2] control: " + String(c >> 8) + ", action: " + String(a) +
+        ", code: " + String(code) + ", key: " + String(key));
 
     kbd->handleKey(key, a);
 }
@@ -126,9 +124,9 @@ void ExternalKbd::setJoystickMap(Joystick *j) {
             uint16_t c = ps2.read();
 
             if ((c & PS2_BREAK) != 0) {
-                uint8_t code = c & 0xff;
+                uint8_t code = toInputCode(c & 0xff);
                 uint8_t key = map.translate(code);
-                DPRINTLN("[PS/2] joystick setup '" + String((char)code) + "'");
+                DPRINTLN("[PS/2] joystick setup " + String(key));
                 m[ix] = key;
                 ix++;
             }

@@ -91,8 +91,8 @@ void TargetKbd::handleKey(uint8_t k, KeyAction a) {
             break;
     }
 
-    DPRINTLN("[TRGT] address: " + String(k) + ", ax: " + String(ax) +
-        ", ay: " + String(ay) + ", data: " + String(data));
+    DPRINTLN("[TRGT] key: " + String(k) + ", address: " + String(k) + ", ax: "
+        + String(ax) + ", ay: " + String(ay) + ", data: " + String(data));
 
     mt88xx.setSwitch(k, data);
 
