@@ -122,8 +122,8 @@ static const uint8_t combo_quote[]        = {K_SHIFT, K_7};
 static const uint8_t combo_double_quote[] = {K_SHIFT, K_P};
 static const uint8_t combo_equal[]        = {K_SHIFT, K_L};
 static const uint8_t combo_delete[]       = {K_SHIFT, K_0};
-static const uint8_t combo_up[]           = {K_SHIFT, K_6};
-static const uint8_t combo_down[]         = {K_SHIFT, K_7};
+static const uint8_t combo_up[]           = {K_SHIFT, K_7};
+static const uint8_t combo_down[]         = {K_SHIFT, K_6};
 static const uint8_t combo_left[]         = {K_SHIFT, K_5};
 static const uint8_t combo_right[]        = {K_SHIFT, K_8};
 
