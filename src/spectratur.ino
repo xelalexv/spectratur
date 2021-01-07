@@ -98,7 +98,7 @@ void loop() {
         uint8_t buf[2] = {0, 0};
         Serial.readBytes(buf, 2);
         if (!handleSerial(buf) && (serialKbd != NULL)) {
-            serialKbd->process(buf, targetKbd);
+            serialKbd->process(buf, targetKbd, joystick);
         }
     }
 
@@ -141,6 +141,7 @@ void hello() {
 //
 void reset() {
     DPRINTLN("[MAIN] resetting");
+    serialKbd->reset();
     targetKbd->reset();
     if (externalKbd != NULL) {
         externalKbd->reset();

@@ -22,7 +22,13 @@ SerialKbd::SerialKbd() {
 }
 
 //
-void SerialKbd::process(uint8_t readBuf[2], TargetKbd *kbd) {
+void SerialKbd::reset() {
+    DPRINTLN("[ SER] resetting");
+    joystickMapIx = -1;
+}
+
+//
+void SerialKbd::process(uint8_t readBuf[2], TargetKbd *kbd, Joystick *joy) {
 
     uint8_t makeBreak = readBuf[0];
     uint8_t code = readBuf[1];
@@ -44,5 +50,21 @@ void SerialKbd::process(uint8_t readBuf[2], TargetKbd *kbd) {
     DPRINTLN("[ SER] action: " + String(a) + ", code: " + String(code) +
         ", key: " + String(key));
 
-    kbd->handleKey(key, a);
+    if (code == 59) { // start joystick map setup (F1); TODO: make configurable
+        if (a == RELEASE_KEY && joy != NULL) {
+            DPRINTLN("[ SER] setting joystick");
+            joystickMapIx = 0;
+        }
+
+    } else if (joystickMapIx < 0) { // regular key handling
+        kbd->handleKey(key, a);
+
+    } else if (a == RELEASE_KEY) { // collecting joystick map
+        DPRINTLN("[ SER] joystick setup " + String(key));
+        joystickMap[joystickMapIx++] = key;
+        if (joystickMapIx == array_len(joystickMap)) {
+            joystickMapIx = -1;
+            joy->setMap(joystickMap);
+        }
+    }
 }

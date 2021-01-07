@@ -20,6 +20,7 @@
 #include <Arduino.h>
 
 #include "config.h"
+#include "joystick.h"
 #include "keymap.h"
 #include "targetkbd.h"
 
@@ -28,10 +29,13 @@ class SerialKbd {
 
 private:
     KeyMap *map;
+    uint8_t joystickMap[JOYSTICK_ACTIONS];
+    int8_t joystickMapIx = -1;
 
 public:
     SerialKbd();
-    void process(uint8_t readBuf[2], TargetKbd *kbd);
+    void reset();
+    void process(uint8_t readBuf[2], TargetKbd *kbd, Joystick *joy);
 };
 
 #endif

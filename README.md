@@ -50,7 +50,7 @@ For capturing key strokes on your PC, there currently is only a small *Linux* ut
 ### Joystick
 The schematic shows how to wire a 9 pin joystick connector. Note however that the wiring assumes a standard *Atari* joystick. **If you're using anything else, make sure what the correct wiring should be!** You may otherwise short out the 5V supply voltage and destroy the *Arduino* and/or your joystick! You need to enable the joystick port via the `JOYSTICK` setting in [the config](src/config.h).
 
-Actions on the joystick are translated to key strokes. To set up which action is which key, press `F1` on the *USB* keyboard, followed by the five desired keys in the order *up*, *down*, *left*, *right*, and *fire*. The default assignment is `Q`, `A`, `N`, `M`, and `Z`.
+Actions on the joystick are translated to key strokes. To set up which action is which key, press `F1` on the *USB* or PC keyboard, followed by the five desired keys in the order *up*, *down*, *left*, *right*, and *fire*. The default assignment is `Q`, `A`, `N`, `M`, and `Z`.
 
 ## Defining Your Own Target
 *spectratur* comes with target definitions for the *Sinclair* [*Spectrum*](src/target_spectrum.h) and [*ZX80/81*](src/target_zx80.h) machines. You can use these definitions as a starting point for your own target. The definition for the *Spectrum* has detailed explanations about how this is done. Here's just a rough outline of what is involved:
