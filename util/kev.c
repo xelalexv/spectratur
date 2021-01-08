@@ -34,6 +34,12 @@
 // logging
 #include "log.h"
 
+//
+#define IMAGE_WINDOW_NAME "Spectratur"
+#define WIN_NAME_BUF_SIZE 500
+
+#define LEN(x)  (sizeof(x) / sizeof((x)[0]))
+
 /*
     serial port code based on:
         https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
@@ -46,33 +52,184 @@
 
  */
 
-// --- keyboard image window --------------------------------------------------
+// constants
+static const char *const keyActionTypes[3] = {
+    "RELEASED",
+    "PRESSED ",
+    "REPEATED"
+};
 
-#define IMAGE_WINDOW_NAME "Spectratur"
+static const int BREAK = 0;
+static const int MAKE = 1;
+
+void cleanup();
+
+// file descriptors
+int fdSerialPort = -1;
+int fdKeyboard = -1;
+
+// --- serial communication ---------------------------------------------------
 
 //
-void keyboard_window_destroy(void) {
+int configure_port(int fd, int speed, int parity) {
+
+    struct termios tty;
+    if (tcgetattr(fd, &tty) != 0) {
+        log_error("error %d from tcgetattr", errno);
+        return 0;
+    }
+
+    cfsetospeed(&tty, speed);
+    cfsetispeed(&tty, speed);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
+    // disable IGNBRK for mismatched speed tests; otherwise receive break
+    // as \000 chars
+    tty.c_iflag &= ~IGNBRK;         // disable break processing
+    tty.c_lflag = 0;                // no signaling chars, no echo,
+                                    // no canonical processing
+    tty.c_oflag = 0;                // no remapping, no delays
+    tty.c_cc[VMIN]  = 0;            // read doesn't block
+    tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+    tty.c_cflag |= (CLOCAL | CREAD);    // ignore modem controls, enable reading
+    tty.c_cflag &= ~(PARENB | PARODD);  // shut off parity
+    tty.c_cflag |= parity;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        log_error("error %d from tcsetattr", errno);
+        return 0;
+    }
+
+    return 1;
+}
+
+//
+void set_blocking(int fd, int should_block) {
+
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+    if (tcgetattr(fd, &tty) != 0) {
+        log_error("error %d from tggetattr", errno);
+        return;
+    }
+
+    tty.c_cc[VMIN] = should_block ? 1 : 0;
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+        log_error("error %d setting term attributes", errno);
+    }
+}
+
+//
+int open_serial_port_or_die(char* port) {
+
+    if (port == NULL) {
+        log_fatal("you need to specify the serial port to use");
+        exit(EXIT_FAILURE);
+    }
+
+    log_info("opening serial port %s", port);
+    int fd = open(port, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0) {
+        log_fatal("cannot open %s: %s", port, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    configure_port(fd, B115200, 0); // set speed to 115,200 bps, 8n1 (no parity)
+    set_blocking(fd, 0); // set no blocking
+    return fd;
+}
+
+//
+void close_serial_port(int fd) {
+    if (fd) {
+        log_info("closing serial port");
+        close(fd);
+    }
+}
+
+//
+void send_key_stroke(int typ, int code, int fdSer) {
+
+    if (typ < 0 || typ >= LEN(keyActionTypes)) {
+        return;
+    }
+
+    log_debug("%s 0x%04x (%d)", keyActionTypes[typ], code, code);
+
+    if (typ != MAKE && typ != BREAK) {
+        return;
+    }
+
+    char sendBuf[2];
+    sendBuf[0] = (char)typ;
+    sendBuf[1] = (char)code;
+
+    log_debug("sending to serial: [0x%x, 0x%x]", sendBuf[0], sendBuf[1]);
+    write(fdSer, &sendBuf, 2);
+}
+
+// --- keyboard image window --------------------------------------------------
+
+//
+void window_destroy(void) {
     gtk_main_quit();
+    cleanup();
     log_info("exiting");
     exit(EXIT_SUCCESS);
 }
 
 //
-void open_keyboard_window_threaded(char* file) {
+// TODO: not sure why GDK scan codes are eight higher than kernel input event
+//       codes
+// see:
+//      https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/input-event-codes.h#n65
+//
+gboolean key_pressed(GtkWidget* widget, GdkEventKey* evt, gpointer data) {
+    send_key_stroke(1, evt->hardware_keycode - 8, fdSerialPort);
+    return TRUE;
+}
+
+//
+gboolean key_released(GtkWidget* widget, GdkEventKey* evt, gpointer data) {
+    send_key_stroke(0, evt->hardware_keycode - 8, fdSerialPort);
+    return TRUE;
+}
+
+//
+typedef struct {
+    char* file;
+    int listen;
+} thread_data;
+
+//
+void open_keyboard_window_threaded(thread_data* d) {
 
     GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), IMAGE_WINDOW_NAME);
-    g_signal_connect(window, "destroy",
-        G_CALLBACK(keyboard_window_destroy), NULL);
 
-    GtkWidget* image = gtk_image_new_from_file(file);
+    if (d->listen) {
+        gtk_widget_add_events(window, GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK);
+        g_signal_connect(window, "key_press_event", G_CALLBACK(key_pressed), NULL);
+        g_signal_connect(window, "key_release_event", G_CALLBACK(key_released), NULL);
+    }
+
+    g_signal_connect(window, "destroy", G_CALLBACK(window_destroy), NULL);
+
+    GtkWidget* image = gtk_image_new_from_file(d->file);
     gtk_container_add(GTK_CONTAINER(window), image);
     gtk_widget_show_all(window);
     gtk_main();
 }
 
 //
-void open_keyboard_window_or_die(char* file) {
+void open_keyboard_window_or_die(char* file, int listen) {
 
     gtk_init(NULL, NULL);
 
@@ -83,10 +240,15 @@ void open_keyboard_window_or_die(char* file) {
         exit(EXIT_FAILURE);
     }
 
-    char *name = "gtk-thread";
-    GError *err = NULL;
-    GThread *thread = g_thread_try_new(
-        name, (GThreadFunc)open_keyboard_window_threaded, file, &err);
+    char* name = "gtk-thread";
+    GError* err = NULL;
+    thread_data d;
+    d.file = file;
+    d.listen = listen;
+
+    GThread* thread = g_thread_try_new(
+        name, (GThreadFunc)open_keyboard_window_threaded, &d, &err);
+
     if (thread != NULL) {
         log_debug("keyboard window thread created");
     } else {
@@ -97,10 +259,7 @@ void open_keyboard_window_or_die(char* file) {
     }
 }
 
-
 // --- window focus -----------------------------------------------------------
-
-#define WIN_NAME_BUF_SIZE 500
 
 char ownWindowName[WIN_NAME_BUF_SIZE];
 char bufName[WIN_NAME_BUF_SIZE];
@@ -260,86 +419,6 @@ Display* open_display_or_die() {
     return d;
 }
 
-
-// --- serial port ------------------------------------------------------------
-
-//
-int configure_port(int fd, int speed, int parity) {
-
-    struct termios tty;
-    if (tcgetattr(fd, &tty) != 0) {
-        log_error("error %d from tcgetattr", errno);
-        return 0;
-    }
-
-    cfsetospeed(&tty, speed);
-    cfsetispeed(&tty, speed);
-
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
-    // disable IGNBRK for mismatched speed tests; otherwise receive break
-    // as \000 chars
-    tty.c_iflag &= ~IGNBRK;         // disable break processing
-    tty.c_lflag = 0;                // no signaling chars, no echo,
-                                    // no canonical processing
-    tty.c_oflag = 0;                // no remapping, no delays
-    tty.c_cc[VMIN]  = 0;            // read doesn't block
-    tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
-
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
-
-    tty.c_cflag |= (CLOCAL | CREAD);    // ignore modem controls, enable reading
-    tty.c_cflag &= ~(PARENB | PARODD);  // shut off parity
-    tty.c_cflag |= parity;
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        log_error("error %d from tcsetattr", errno);
-        return 0;
-    }
-
-    return 1;
-}
-
-//
-void set_blocking(int fd, int should_block) {
-
-    struct termios tty;
-    memset(&tty, 0, sizeof tty);
-    if (tcgetattr(fd, &tty) != 0) {
-        log_error("error %d from tggetattr", errno);
-        return;
-    }
-
-    tty.c_cc[VMIN] = should_block ? 1 : 0;
-    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
-
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        log_error("error %d setting term attributes", errno);
-    }
-}
-
-//
-int open_serial_port_or_die(char* port) {
-
-    if (port == NULL) {
-        log_fatal("you need to specify the serial port to use");
-        exit(EXIT_FAILURE);
-    }
-
-    log_info("opening serial port %s", port);
-    int fd = open(port, O_RDWR | O_NOCTTY | O_SYNC);
-    if (fd < 0) {
-        log_fatal("cannot open %s: %s", port, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    configure_port(fd, B115200, 0); // set speed to 115,200 bps, 8n1 (no parity)
-    set_blocking(fd, 0); // set no blocking
-    return fd;
-}
-
-
 // --- keyboard ---------------------------------------------------------------
 
 int open_keyboard_or_die(char* kbd) {
@@ -352,28 +431,30 @@ int open_keyboard_or_die(char* kbd) {
     return fd;
 }
 
+//
+void close_keyboard(int fd) {
+    if (fd) {
+        log_info("closing keyboard");
+        close(fd);
+    }
+}
 
 // --- read & send loop -------------------------------------------------------
 
-//
-static const char *const evval[3] = {
-    "RELEASED",
-    "PRESSED ",
-    "REPEATED"
-};
-
-// read key strokes & send to serial
+// read key strokes & send to serial; NULL display implies to always read key events
 void read_kbd_and_send(Display* d, int fdKbd, int fdSer) {
+
+    log_info("starting to read from keyboard");
 
     struct input_event ev;
     ssize_t n;
-    char sendBuf[2];
 
     while (TRUE) {
 
         n = read(fdKbd, &ev, sizeof ev);
 
-        if (!is_in_focus(d, ownWindowName, bufName, sizeof(ownWindowName))) {
+        if (d != NULL &&
+            !is_in_focus(d, ownWindowName, bufName, sizeof(ownWindowName))) {
             log_trace("not in focus");
             continue;
         }
@@ -389,23 +470,8 @@ void read_kbd_and_send(Display* d, int fdKbd, int fdSer) {
             break;
         }
 
-        if (ev.type == EV_KEY && 0 <= ev.value && ev.value <= 2) {
-
-            log_debug("%s 0x%04x (%d)",
-                evval[ev.value], (int)ev.code, (int)ev.code);
-
-            sendBuf[0] = (char)ev.value; // 0 = break, 1 = make
-            sendBuf[1] = (char)ev.code;
-
-            switch (ev.value) {
-                case 0:
-                case 1:
-                    log_debug("sending to serial: [0x%x, 0x%x]",
-                        sendBuf[0], sendBuf[1]);
-                    write(fdSer, &sendBuf, 2);
-                default: // i.e. 2, autorepeat
-                    break;
-            }
+        if (ev.type == EV_KEY) {
+            send_key_stroke(ev.value, ev.code, fdSer);
         }
     }
 }
@@ -415,12 +481,37 @@ void read_kbd_and_send(Display* d, int fdKbd, int fdSer) {
 
 //
 void usage() {
-    printf("\nsynopsis: kev -p {serial port device} [-k {keyboard device}] [-v debug|trace] [-i {keyboard image file}]\n\n");
+    printf("\nsynopsis:\n\n  kev \
+-p {serial port device} [-i {keyboard image file}] [-k {keyboard device}] [-a] \
+[-v debug|trace]\n\n\
+    -i  open new window with given image file and listen for key events there;\n\
+        does not require root privileges, and all key event sources of the\n\
+        system will be considered, i.e. all attached keyboards, but also game\n\
+        controllers creating key events via e.g. QJoyPad\n\n\
+    -k  read key events only from the given keyboard device; implied when not\n\
+        using -i; requires root privileges\n\n\
+    -a  read all key events, regardless of whether console window is in focus;\n\
+        implies -k\n\n\
+    -v  log level, 'debug' or 'trace'\n\n");
     exit(EXIT_SUCCESS);
 }
 
 //
-int main(int argc, char *argv[]) {
+void cleanup() {
+    close_keyboard(fdKeyboard);
+    send_key_stroke('!', 0, fdSerialPort); // reset adapter
+    close_serial_port(fdSerialPort);
+}
+
+//
+void sigIntHandler() {
+    cleanup();
+    log_info("exiting");
+    exit(0);
+}
+
+//
+int main(int argc, char* argv[]) {
 
     log_set_level(LOG_INFO);
 
@@ -428,12 +519,13 @@ int main(int argc, char *argv[]) {
         usage();
     }
 
-    char *devKbd = "/dev/input/by-path/platform-i8042-serio-0-event-kbd";
-    char *imgKbd = NULL;
-    char *portName = NULL;
+    char* devKbd = NULL;
+    char* imgKbd = NULL;
+    char* portName = NULL;
+    int useDisplay = 1;
 
     int opt;
-    while((opt = getopt(argc, argv, ":hk:i:p:v:")) != -1) {
+    while((opt = getopt(argc, argv, ":hk:i:p:lv:")) != -1) {
         switch(opt) {
 
             case 'h':
@@ -450,6 +542,10 @@ int main(int argc, char *argv[]) {
 
             case 'p': // serial port (required)
                 portName = optarg;
+                break;
+
+            case 'l': // no display (optional)
+                useDisplay = 0;
                 break;
 
             case 'v': // log level
@@ -475,19 +571,48 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    Display* disp = open_display_or_die();
-    int fdKbd = open_keyboard_or_die(devKbd);
-    int fdSer = open_serial_port_or_die(portName);
-
-    if (imgKbd != NULL) {
-        open_keyboard_window_or_die(imgKbd);
-        strncpy(ownWindowName, IMAGE_WINDOW_NAME, sizeof(ownWindowName)-1);
-    } else {
-        get_own_window_name_or_die(disp);
+    if (imgKbd == NULL && devKbd == NULL) {
+        devKbd = "/dev/input/by-path/platform-i8042-serio-0-event-kbd";
     }
 
-    read_kbd_and_send(disp, fdKbd, fdSer);
+    if (imgKbd != NULL && !useDisplay) {
+        log_fatal("-l conflicts with -i");
+        return EXIT_FAILURE;
+    }
 
+    signal(SIGINT, sigIntHandler);
+
+    fdSerialPort = open_serial_port_or_die(portName);
+
+    Display* disp = NULL;
+    if (useDisplay) {
+        disp = open_display_or_die();
+    }
+
+    if (imgKbd != NULL) {
+        open_keyboard_window_or_die(imgKbd, devKbd == NULL);
+        strncpy(ownWindowName, IMAGE_WINDOW_NAME, sizeof(ownWindowName)-1);
+    } else {
+        if (useDisplay) {
+            get_own_window_name_or_die(disp);
+        } else {
+            log_info("disregarding input focus");
+        }
+    }
+
+    if (devKbd == NULL) {
+        log_info("listening for key events on image window");
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigsuspend(&mask);
+    } else {
+        log_info("reading key events from keyboard %s", devKbd);
+        fdKeyboard = open_keyboard_or_die(devKbd);
+        read_kbd_and_send(disp, fdKeyboard, fdSerialPort);
+        // read_xevents_and_send(disp, fdSerialPort);
+    }
+
+    cleanup();
     fflush(stdout);
     log_fatal("%s", strerror(errno));
     return EXIT_FAILURE;
