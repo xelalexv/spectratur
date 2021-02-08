@@ -62,9 +62,7 @@ void TargetKbd::handleKey(uint8_t k, KeyAction a) {
         return;
     }
 
-    if (isCombo(k)) {
-        DPRINTLN("[TRGT] combo " + String(k));
-        handleCombo(COMBOS[k & ~K_COMBO], a);
+    if (handleSpecial(k, a)) {
         return;
     }
 
@@ -103,26 +101,73 @@ void TargetKbd::handleKey(uint8_t k, KeyAction a) {
 }
 
 //
+bool TargetKbd::isSpecial(uint8_t key) {
+    return ((key & K_SPECIAL) == K_SPECIAL)
+        && ((key & ~K_SPECIAL) < END_OF_SPECIALS);
+}
+
+//
+bool TargetKbd::handleSpecial(uint8_t key, KeyAction a) {
+    if (isSpecial(key)) {
+        uint8_t ix = key & ~K_SPECIAL;
+        DPRINTLN("[TRGT] special " + String(key) + " @ " + String(ix));
+        if (ix < END_OF_COMBOS) {
+            handleCombo(SPECIALS[ix], a);
+        } else if (ix > END_OF_COMBOS && a == RELEASE_KEY) {
+            handleMacro(SPECIALS[ix]);
+        }
+        return true;
+    }
+    return false;
+}
+
+//
 void TargetKbd::handleCombo(uint8_t combo[], KeyAction a) {
-    if (a == PRESS_KEY) {
-        for (int ix = 0; ix < array_len(combo); ix++) {
+
+    DPRINT("[TRGT] combo");
+    bool toggle = combo[0] == TOGGLE;
+    int ix = 0;
+
+    if (toggle) {
+        DPRINTLN(" (toggle)");
+        a = a == PRESS_KEY ? FLIP_KEY : a;
+        ix = 1;
+    } else {
+        DPRINTLN();
+    }
+
+    for (; combo[ix] != NA; ix++) {
+        if (a != RELEASE_KEY) {
             handleKey(combo[ix], a);
         }
-    } else if (a == RELEASE_KEY) {
-        for (int ix = array_len(combo) - 1; ix >= 0 ; ix--) {
+    }
+
+    if (!toggle && a == RELEASE_KEY) {
+        for (ix = ix - 1; ix >= 0 ; ix--) {
             handleKey(combo[ix], a);
         }
     }
 }
 
 //
-bool TargetKbd::isCombo(uint8_t key) {
-    return ((key & K_COMBO) == K_COMBO) && ((key & ~K_COMBO) < END_OF_COMBOS);
+void TargetKbd::handleMacro(uint8_t macro[]) {
+    DPRINTLN("[TRGT] macro");
+    uint8_t k;
+    for (int ix = 0; ; ix++) {
+        k = macro[ix];
+        if (k == NA) {
+            break;
+        }
+        handleKey(k, PRESS_KEY);
+        delay(MACRO_DELAY_PRESS);
+        handleKey(k, RELEASE_KEY);
+        delay(MACRO_DELAY_RELEASE);
+    }
 }
 
 //
 bool TargetKbd::isValidKeyAddress(uint8_t key) {
-    return key < K_COMBO;
+    return key < K_SPECIAL;
 }
 
 

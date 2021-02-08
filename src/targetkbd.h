@@ -32,12 +32,14 @@ private:
     uint8_t kbdMatrix[16];
 
     void clearKeyboardMatrix();
-    bool isCombo(uint8_t key);
+    bool isSpecial(uint8_t key);
     bool isValidKeyAddress(uint8_t key);
     bool isValidAxAy(uint8_t ax, uint8_t ay);
     void setKeyState(uint8_t ax, uint8_t ay, bool on);
     bool getKeyState(uint8_t ax, uint8_t ay);
+    bool handleSpecial(uint8_t key, KeyAction a);
     void handleCombo(uint8_t combo[], KeyAction a);
+    void handleMacro(uint8_t macro[]);
 
 public:
     TargetKbd();

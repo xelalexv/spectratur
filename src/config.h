@@ -40,24 +40,35 @@
 #define JOYSTICK true
 
 
-// macro for key combinations (combos)
+// macro for special keys (combos & macros)
 //
-#define COMBO( c ) K_COMBO | c
+#define SK( k ) K_SPECIAL | k
 
-static const uint8_t NA = 0xff; // shorthand for "not assigned"
-static const uint8_t K_COMBO   = B10000000; // base for a key combination
+static const uint8_t NA        = 0xff; // shorthand for "not assigned"
+static const uint8_t TOGGLE    = 0xfe; // shorthand for "toggle key"
+static const uint8_t K_SPECIAL = B10000000; // base for special keys
 static const uint8_t K_MASK_AX = B00001111; // mask for AX address bits
 static const uint8_t K_MASK_AY = B01110000; // mask for AY address bits
+
+
+// delay in ms after pressing a key within a macro
+//
+#define MACRO_DELAY_PRESS 100
+
+// delay in ms after releasing a key within a macro
+//
+#define MACRO_DELAY_RELEASE 200
 
 
 // Include the header file with all the necessary definitions for your target
 // system here.
 //
-#include "target_spectrum.h"
-//#include "target_zx80.h"
+//#include "targets/sinclair_spectrum.h"
+//#include "targets/sinclair_zx80.h"
+#include "targets/sinclair_zx81.h"
 
 
-// --- debug helpers ---------------------------------------------------------
+// --- debug helpers ----------------------------------------------------------
 
 #if DEBUG == true
 
@@ -74,12 +85,12 @@ static const uint8_t K_MASK_AY = B01110000; // mask for AY address bits
 #endif
 
 
-// --- other helpers ---------------------------------------------------------
+// --- other helpers ----------------------------------------------------------
 
 #define array_len( x )  ( sizeof( x ) / sizeof( *x ) )
 
 
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 // key action - maintained here since enums can't reside in main file
 enum KeyAction {
