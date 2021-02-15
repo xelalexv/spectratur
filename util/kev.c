@@ -185,6 +185,10 @@ void window_destroy(void) {
     exit(EXIT_SUCCESS);
 }
 
+// for filtering out auto repeat keys
+guint16 lastPressedKey = 0;
+Bool lastWasPressed = False;
+
 //
 // TODO: not sure why GDK scan codes are eight higher than kernel input event
 //       codes
@@ -192,13 +196,21 @@ void window_destroy(void) {
 //      https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/input-event-codes.h#n65
 //
 gboolean key_pressed(GtkWidget* widget, GdkEventKey* evt, gpointer data) {
-    send_key_stroke(1, evt->hardware_keycode - 8, fdSerialPort);
+    guint16 code = evt->hardware_keycode - 8;
+    if (!lastWasPressed || lastPressedKey != code) {
+        send_key_stroke(1, code, fdSerialPort);
+        lastPressedKey = code;
+        lastWasPressed = True;
+    } else {
+        log_debug("discarding auto-repeated key 0x%04x (%d)", code, code);
+    }
     return TRUE;
 }
 
 //
 gboolean key_released(GtkWidget* widget, GdkEventKey* evt, gpointer data) {
     send_key_stroke(0, evt->hardware_keycode - 8, fdSerialPort);
+    lastWasPressed = False;
     return TRUE;
 }
 
