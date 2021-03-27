@@ -245,13 +245,6 @@ void open_keyboard_window_or_die(char* file, int listen) {
 
     gtk_init(NULL, NULL);
 
-    if (g_thread_supported()) {
-        log_debug("g_thread supported");
-    } else {
-        log_fatal("cannot open keyboard window: g_thread not supported");
-        exit(EXIT_FAILURE);
-    }
-
     char* name = "gtk-thread";
     GError* err = NULL;
     thread_data d;
